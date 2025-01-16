@@ -44,11 +44,18 @@ const getContent = (content: string) => {
 // Fetch raw content from GitHub
 const fetchFromGitHub = async (filename: string) => {
   const baseUrl = 'https://raw.githubusercontent.com/matthewanthony777/legal-words-gallery/main/content/articles/';
-  const response = await fetch(`${baseUrl}${filename}`);
-  if (!response.ok) {
-    throw new Error(`Failed to fetch ${filename}`);
+  console.log(`Fetching from: ${baseUrl}${filename}`);
+  try {
+    const response = await fetch(`${baseUrl}${filename}`);
+    if (!response.ok) {
+      console.error(`Failed to fetch ${filename}: ${response.status} ${response.statusText}`);
+      throw new Error(`Failed to fetch ${filename}`);
+    }
+    return response.text();
+  } catch (error) {
+    console.error('Error fetching from GitHub:', error);
+    throw error;
   }
-  return response.text();
 };
 
 // Read all articles from GitHub
@@ -59,23 +66,32 @@ export const getArticles = async (): Promise<Article[]> => {
     'intellectual-property-rights.mdx'
   ];
   
-  const articles = await Promise.all(
-    filenames.map(async (filename) => {
-      const content = await fetchFromGitHub(filename);
-      return {
-        frontmatter: extractFrontmatter(content),
-        content: getContent(content)
-      };
-    })
-  );
-  
-  return articles;
+  try {
+    const articles = await Promise.all(
+      filenames.map(async (filename) => {
+        const content = await fetchFromGitHub(filename);
+        return {
+          frontmatter: extractFrontmatter(content),
+          content: getContent(content)
+        };
+      })
+    );
+    return articles;
+  } catch (error) {
+    console.error('Error getting articles:', error);
+    throw error;
+  }
 };
 
 // Get a single article by slug
 export const getArticleBySlug = async (slug: string): Promise<Article | undefined> => {
-  const articles = await getArticles();
-  return articles.find(article => article.frontmatter.slug === slug);
+  try {
+    const articles = await getArticles();
+    return articles.find(article => article.frontmatter.slug === slug);
+  } catch (error) {
+    console.error('Error getting article by slug:', error);
+    throw error;
+  }
 };
 
 // API endpoint for all articles
@@ -84,30 +100,43 @@ export async function GET(request: Request) {
     const url = new URL(request.url);
     const slug = url.pathname.split('/articles/')[1];
 
+    const headers = {
+      'content-type': 'application/json;charset=UTF-8',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
+    };
+
+    if (request.method === 'OPTIONS') {
+      return new Response(null, { headers });
+    }
+
     if (slug) {
+      console.log(`Fetching article with slug: ${slug}`);
       const article = await getArticleBySlug(slug);
       if (!article) {
-        return new Response('Article not found', { status: 404 });
+        console.error(`Article not found for slug: ${slug}`);
+        return new Response(JSON.stringify({ error: 'Article not found' }), { 
+          status: 404,
+          headers 
+        });
       }
-      return new Response(JSON.stringify(article), {
-        headers: {
-          'content-type': 'application/json;charset=UTF-8',
-        },
-      });
+      return new Response(JSON.stringify(article), { headers });
     }
 
     const articles = await getArticles();
-    return new Response(JSON.stringify(articles), {
-      headers: {
-        'content-type': 'application/json;charset=UTF-8',
-      },
-    });
+    return new Response(JSON.stringify(articles), { headers });
   } catch (error) {
-    return new Response(JSON.stringify({ error: 'Failed to fetch articles' }), {
-      status: 500,
-      headers: {
-        'content-type': 'application/json;charset=UTF-8',
-      },
-    });
+    console.error('API Error:', error);
+    return new Response(
+      JSON.stringify({ error: 'Failed to fetch articles', details: error.message }), 
+      { 
+        status: 500,
+        headers: {
+          'content-type': 'application/json;charset=UTF-8',
+          'Access-Control-Allow-Origin': '*'
+        }
+      }
+    );
   }
 }

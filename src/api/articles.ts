@@ -27,7 +27,7 @@ const getContent = (content: string) => {
 };
 
 // Read all articles from the content folder
-const getArticles = () => {
+export const getArticles = () => {
   const articlesPath = join(process.cwd(), 'content', 'articles');
   const articles = [
     'environmental-law-2024.mdx',
@@ -44,9 +44,30 @@ const getArticles = () => {
   return articles;
 };
 
-export const articles = getArticles();
+// Get a single article by slug
+export const getArticleBySlug = (slug: string) => {
+  const articles = getArticles();
+  return articles.find(article => article.frontmatter.slug === slug);
+};
 
-export async function GET() {
+// API endpoint for all articles
+export async function GET(request: Request) {
+  const url = new URL(request.url);
+  const slug = url.pathname.split('/articles/')[1];
+
+  if (slug) {
+    const article = getArticleBySlug(slug);
+    if (!article) {
+      return new Response('Article not found', { status: 404 });
+    }
+    return new Response(JSON.stringify(article), {
+      headers: {
+        'content-type': 'application/json;charset=UTF-8',
+      },
+    });
+  }
+
+  const articles = getArticles();
   return new Response(JSON.stringify(articles), {
     headers: {
       'content-type': 'application/json;charset=UTF-8',

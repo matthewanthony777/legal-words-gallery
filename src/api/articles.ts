@@ -1,8 +1,5 @@
-// Import the MDX files as raw content
-import environmentalLaw from '../content/articles/environmental-law-2024.mdx?raw';
-import privacyLaws from '../content/articles/privacy-laws-ai-era.mdx?raw';
-import intellectualProperty from '../content/articles/intellectual-property-rights.mdx?raw';
-import { serialize } from 'next-mdx-remote/serialize';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 
 // Helper function to extract frontmatter from MDX content
 const extractFrontmatter = (content: string) => {
@@ -29,20 +26,25 @@ const getContent = (content: string) => {
   return content.replace(/---\n[\s\S]*?\n---/, '').trim();
 };
 
-export const articles = [
-  {
-    frontmatter: extractFrontmatter(environmentalLaw),
-    content: getContent(environmentalLaw)
-  },
-  {
-    frontmatter: extractFrontmatter(privacyLaws),
-    content: getContent(privacyLaws)
-  },
-  {
-    frontmatter: extractFrontmatter(intellectualProperty),
-    content: getContent(intellectualProperty)
-  }
-];
+// Read all articles from the content folder
+const getArticles = () => {
+  const articlesPath = join(process.cwd(), 'content', 'articles');
+  const articles = [
+    'environmental-law-2024.mdx',
+    'privacy-laws-ai-era.mdx',
+    'intellectual-property-rights.mdx'
+  ].map(filename => {
+    const filePath = join(articlesPath, filename);
+    const content = readFileSync(filePath, 'utf-8');
+    return {
+      frontmatter: extractFrontmatter(content),
+      content: getContent(content)
+    };
+  });
+  return articles;
+};
+
+export const articles = getArticles();
 
 export async function GET() {
   return new Response(JSON.stringify(articles), {

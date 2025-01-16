@@ -43,9 +43,11 @@ const getContent = (content: string) => {
 // Fetch raw content from GitHub
 const fetchFromGitHub = async (filename: string) => {
   const baseUrl = 'https://raw.githubusercontent.com/matthewanthony777/legal-words-gallery/main/content/articles/';
-  console.log(`Fetching from: ${baseUrl}${filename}`);
+  const fullUrl = `${baseUrl}${filename}`;
+  console.log(`Fetching from: ${fullUrl}`);
+  
   try {
-    const response = await fetch(`${baseUrl}${filename}`);
+    const response = await fetch(fullUrl);
     if (!response.ok) {
       console.error(`Failed to fetch ${filename}: ${response.status} ${response.statusText}`);
       throw new Error(`Failed to fetch ${filename}`);

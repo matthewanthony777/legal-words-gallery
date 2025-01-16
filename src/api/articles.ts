@@ -28,7 +28,6 @@ const extractFrontmatter = (content: string): ArticleFrontmatter => {
     const [key, ...valueParts] = line.split(':');
     if (key && valueParts.length) {
       const value = valueParts.join(':').trim();
-      // Remove quotes if they exist
       frontmatter[key.trim()] = value.replace(/^['"](.*)['"]$/, '$1');
     }
   });
@@ -51,7 +50,9 @@ const fetchFromGitHub = async (filename: string) => {
       console.error(`Failed to fetch ${filename}: ${response.status} ${response.statusText}`);
       throw new Error(`Failed to fetch ${filename}`);
     }
-    return response.text();
+    const text = await response.text();
+    console.log(`Successfully fetched ${filename}`);
+    return text;
   } catch (error) {
     console.error('Error fetching from GitHub:', error);
     throw error;
@@ -87,7 +88,13 @@ export const getArticles = async (): Promise<Article[]> => {
 export const getArticleBySlug = async (slug: string): Promise<Article | undefined> => {
   try {
     const articles = await getArticles();
-    return articles.find(article => article.frontmatter.slug === slug);
+    const article = articles.find(article => article.frontmatter.slug === slug);
+    if (!article) {
+      console.log(`No article found with slug: ${slug}`);
+      return undefined;
+    }
+    console.log(`Found article with slug: ${slug}`);
+    return article;
   } catch (error) {
     console.error('Error getting article by slug:', error);
     throw error;
@@ -98,10 +105,10 @@ export const getArticleBySlug = async (slug: string): Promise<Article | undefine
 export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
-    const slug = url.pathname.split('/articles/')[1];
+    const slug = url.pathname.split('/api/articles/')[1];
 
     const headers = {
-      'content-type': 'application/json;charset=UTF-8',
+      'Content-Type': 'application/json',
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'GET, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type',
@@ -112,10 +119,10 @@ export async function GET(request: Request) {
     }
 
     if (slug) {
-      console.log(`Fetching article with slug: ${slug}`);
+      console.log(`API: Fetching article with slug: ${slug}`);
       const article = await getArticleBySlug(slug);
       if (!article) {
-        console.error(`Article not found for slug: ${slug}`);
+        console.error(`API: Article not found for slug: ${slug}`);
         return new Response(JSON.stringify({ error: 'Article not found' }), { 
           status: 404,
           headers 
@@ -124,6 +131,7 @@ export async function GET(request: Request) {
       return new Response(JSON.stringify(article), { headers });
     }
 
+    console.log('API: Fetching all articles');
     const articles = await getArticles();
     return new Response(JSON.stringify(articles), { headers });
   } catch (error) {
@@ -133,7 +141,7 @@ export async function GET(request: Request) {
       { 
         status: 500,
         headers: {
-          'content-type': 'application/json;charset=UTF-8',
+          'Content-Type': 'application/json',
           'Access-Control-Allow-Origin': '*'
         }
       }

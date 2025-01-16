@@ -1,13 +1,28 @@
 import { readFileSync } from 'fs';
 import { join } from 'path';
 
+interface ArticleFrontmatter {
+  title: string;
+  date: string;
+  author: string;
+  description: string;
+  slug: string;
+  tags: string[];
+  imageUrl?: string;
+}
+
+interface Article {
+  frontmatter: ArticleFrontmatter;
+  content: string;
+}
+
 // Helper function to extract frontmatter from MDX content
-const extractFrontmatter = (content: string) => {
+const extractFrontmatter = (content: string): ArticleFrontmatter => {
   const match = content.match(/---\n([\s\S]*?)\n---/);
-  if (!match) return {};
+  if (!match) return {} as ArticleFrontmatter;
   
   const frontmatterString = match[1];
-  const frontmatter = {};
+  const frontmatter: Record<string, any> = {};
   
   frontmatterString.split('\n').forEach(line => {
     const [key, ...valueParts] = line.split(':');
@@ -18,7 +33,7 @@ const extractFrontmatter = (content: string) => {
     }
   });
   
-  return frontmatter;
+  return frontmatter as ArticleFrontmatter;
 };
 
 // Helper function to get content without frontmatter
@@ -27,7 +42,7 @@ const getContent = (content: string) => {
 };
 
 // Read all articles from the content folder
-export const getArticles = () => {
+export const getArticles = (): Article[] => {
   const articlesPath = join(process.cwd(), 'content', 'articles');
   const articles = [
     'environmental-law-2024.mdx',
@@ -45,7 +60,7 @@ export const getArticles = () => {
 };
 
 // Get a single article by slug
-export const getArticleBySlug = (slug: string) => {
+export const getArticleBySlug = (slug: string): Article | undefined => {
   const articles = getArticles();
   return articles.find(article => article.frontmatter.slug === slug);
 };

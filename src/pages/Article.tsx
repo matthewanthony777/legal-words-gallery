@@ -29,7 +29,14 @@ const Article = () => {
   const { slug } = useParams();
   const { data: article, isLoading, error } = useQuery({
     queryKey: ['article', slug],
-    queryFn: () => fetchArticle(slug || ''),
+    queryFn: async () => {
+      const data = await fetchArticle(slug || '');
+      const mdxSource = await serialize(data.content);
+      return {
+        ...data,
+        mdxSource,
+      };
+    },
     enabled: !!slug,
   });
 
@@ -72,7 +79,7 @@ const Article = () => {
           <span>•</span>
           <time>{new Date(article?.frontmatter.date || '').toLocaleDateString()}</time>
         </div>
-        <MDXRemote {...article?.content} />
+        <MDXRemote {...article?.mdxSource} />
       </article>
     </div>
   );
